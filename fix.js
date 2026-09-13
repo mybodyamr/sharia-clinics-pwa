@@ -15,13 +15,22 @@
     save(db); return earlier;
   }
   function qrFallback(el,text){
-    if(!el)return;
+    if(!el||!text)return;
     setTimeout(()=>{
       if(el.querySelector('canvas,img,table'))return;
-      const img=document.createElement('img');img.width=190;img.height=190;img.alt='QR التذكرة';img.referrerPolicy='no-referrer';
+      const img=document.createElement('img');img.width=190;img.height=190;img.alt='QR التذكرة';img.loading='eager';img.referrerPolicy='no-referrer';
       img.src='https://quickchart.io/qr?size=190&margin=2&text='+encodeURIComponent(text);
       el.appendChild(img);
     },350);
+  }
+  function findCodeForQR(el){
+    const db=load(); if(!db?.bookings?.length)return null;
+    if(el.id==='capture-qr'){
+      const b=db.bookings.filter(x=>x.date===today()).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
+      return b?.code||null;
+    }
+    const id=el.id?.replace(/^qr-/,'');
+    return db.bookings.find(x=>x.id===id)?.code||null;
   }
   function boot(){
     if(window.__shariaV31)return; window.__shariaV31=true;
@@ -34,8 +43,7 @@
       };
     }
     const observer=new MutationObserver(()=>{
-      const q=document.querySelector('.ticket-qr');
-      if(q){const id=q.id?.replace(/^qr-/,'');const db=load();const b=db?.bookings?.find(x=>x.id===id);if(b)qrFallback(q,b.code)}
+      document.querySelectorAll('.ticket-qr,#capture-qr').forEach(q=>{const code=findCodeForQR(q);if(code)qrFallback(q,code)});
     });
     observer.observe(document.body,{childList:true,subtree:true});
   }
